@@ -1,9 +1,7 @@
-import re
-
 tokens = {
     "LBRACE": "{",
     "RBRACE": "}",
-    "WHITESPACE": " ",
+    "WHITESPACE": "  ",
     "DQUOTE": '"',
     "SQUOTE": "'",
     "COLON": ":",
@@ -17,6 +15,8 @@ def lexer(contents):
     temp_string = ""
     quote_count = 0
     brace_count = 0
+    key_count = 0
+    value_count = 0
 
     for line in lines:
         chars = list(line)
@@ -39,10 +39,19 @@ def lexer(contents):
 
                 if quote_count % 2 == 0:
                     in_quotes = False
-                    # If closing quote has been found, string tokenization ends and
-                    # temporary string is cleared
-                    if len(temp_string):
-                        token_seq.append(("STRING", temp_string))
+
+                    """
+                    If closing quote has been found, string tokenization ends,
+                    key / value token is assigned, depending on colon presence,
+                    temporary string is cleared
+                    """
+                    if len(temp_string) and ("COLON", ":") in token_seq:
+                        token_seq.append(("VALUE", temp_string))
+                        value_count += 1
+                        temp_string = ""
+                    elif len(temp_string) and ("COLON", ":") not in token_seq:
+                        token_seq.append(("KEY", temp_string))
+                        key_count += 1
                         temp_string = ""
                 else:
                     in_quotes = True
@@ -50,13 +59,22 @@ def lexer(contents):
                 token_seq.append((char_to_token[char], char))
 
             else:
-                # Creating a string, because lexer found starting quote
+                # Creating a string, because lexer found string opening quote
                 if in_quotes == True:
                     temp_string += char
 
         print(token_seq)
 
-    if token_seq and brace_count >= 2 and brace_count % 2 == 0 and in_braces == False:
+    if (
+        token_seq
+        and brace_count >= 2
+        and brace_count % 2 == 0
+        and in_braces == False
+        and in_quotes == False
+        and key_count >= 1
+        and value_count >= 1
+        and key_count == value_count
+    ):
         print("correct json file")
         return 0
     else:
